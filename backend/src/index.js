@@ -4,6 +4,16 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 require('dotenv').config();
 
+require('./config/db');
+
+const authRoutes = require('./routes/auth.routes');
+const turfRoutes = require('./routes/turf.routes');
+const slotsRoutes = require('./routes/slots.routes');
+const bookingRoutes = require('./routes/booking.routes');
+
+const { startSlotGenerationJob } = require('./jobs/slotGenerator.job');
+const { startLockCleanupJob } = require('./jobs/lockCleanup.job');
+
 const app = express();
 
 app.use(helmet());
@@ -14,6 +24,14 @@ app.use(express.json());
 app.get('/', (req, res) => {
   res.json({ message: 'Arena Sync API is running' });
 });
+
+app.use('/api/auth', authRoutes);
+app.use('/api/turfs', turfRoutes);
+app.use('/api/slots', slotsRoutes);
+app.use('/api/bookings', bookingRoutes);
+
+startSlotGenerationJob();
+startLockCleanupJob();
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
