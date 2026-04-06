@@ -1,288 +1,322 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { getAllTurfs } from '../api'
 
-const sportConfig = {
-  football: { icon: '⚽', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', pill: 'bg-emerald-600' },
-  cricket:  { icon: '🏏', color: 'bg-blue-50 text-blue-700 border-blue-200',    pill: 'bg-blue-600' },
-  basketball:{ icon: '🏀', color: 'bg-orange-50 text-orange-700 border-orange-200', pill: 'bg-orange-500' },
-  badminton: { icon: '🏸', color: 'bg-purple-50 text-purple-700 border-purple-200', pill: 'bg-purple-600' },
-  tennis:   { icon: '🎾', color: 'bg-yellow-50 text-yellow-700 border-yellow-200', pill: 'bg-yellow-500' },
+const sports = {
+  football:   { emoji: '⚽', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500' },
+  cricket:    { emoji: '🏏', bg: 'bg-sky-50',     text: 'text-sky-700',     border: 'border-sky-200',     dot: 'bg-sky-500'     },
+  basketball: { emoji: '🏀', bg: 'bg-orange-50',  text: 'text-orange-700',  border: 'border-orange-200',  dot: 'bg-orange-500'  },
+  badminton:  { emoji: '🏸', bg: 'bg-purple-50',  text: 'text-purple-700',  border: 'border-purple-200',  dot: 'bg-purple-500'  },
+  tennis:     { emoji: '🎾', bg: 'bg-yellow-50',  text: 'text-yellow-700',  border: 'border-yellow-200',  dot: 'bg-yellow-500'  },
 }
 
-const stats = [
-  { value: '500+', label: 'Turfs Listed', icon: '🏟' },
-  { value: '50K+', label: 'Happy Players', icon: '👥' },
-  { value: '20+', label: 'Cities', icon: '📍' },
-  { value: '4.9★', label: 'Avg Rating', icon: '⭐' },
-]
+const amenityIcons = {
+  parking: '🅿', lights: '💡', 'changing rooms': '🚿',
+  cafeteria: '☕', wifi: '📶', washrooms: '🚻',
+}
 
-function TurfCardSkeleton() {
+function Skeleton() {
   return (
-    <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 animate-pulse">
-      <div className="h-52 bg-slate-100" />
+    <div className="bg-white rounded-3xl overflow-hidden border border-ink-100 animate-pulse">
+      <div className="h-56 bg-ink-100"/>
       <div className="p-5 space-y-3">
-        <div className="h-5 bg-slate-100 rounded-lg w-3/4" />
-        <div className="h-4 bg-slate-100 rounded-lg w-1/2" />
-        <div className="flex gap-2">
-          <div className="h-7 bg-slate-100 rounded-lg w-20" />
-          <div className="h-7 bg-slate-100 rounded-lg w-20" />
+        <div className="h-5 bg-ink-100 rounded-xl w-3/4"/>
+        <div className="h-3.5 bg-ink-100 rounded-xl w-1/2"/>
+        <div className="flex gap-2 pt-1">
+          <div className="h-7 w-20 bg-ink-100 rounded-xl"/>
+          <div className="h-7 w-20 bg-ink-100 rounded-xl"/>
         </div>
-        <div className="h-10 bg-slate-100 rounded-xl" />
+        <div className="h-px bg-ink-100 my-1"/>
+        <div className="flex justify-between items-center">
+          <div className="h-7 w-24 bg-ink-100 rounded-xl"/>
+          <div className="h-9 w-28 bg-ink-100 rounded-xl"/>
+        </div>
       </div>
     </div>
   )
 }
 
+function TurfCard({ turf }) {
+  const minPrice = turf.sports?.filter(Boolean).length > 0
+    ? Math.min(...turf.sports.filter(Boolean).map(s => Number(s.base_price)))
+    : 0
+
+  return (
+    <Link to={`/turf/${turf.id}`}
+      className="group bg-white rounded-3xl overflow-hidden border border-ink-100 hover:border-brand-200 transition-all duration-300 hover:shadow-lifted hover:-translate-y-1 flex flex-col">
+
+      <div className="relative h-52 overflow-hidden bg-gradient-to-br from-ink-100 to-ink-200">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-[100px] opacity-[0.07] group-hover:scale-110 group-hover:opacity-[0.1] transition-all duration-500 select-none">🏟</span>
+        </div>
+
+        <div className="absolute inset-0 bg-gradient-to-t from-ink-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"/>
+
+        <div className="absolute top-3 left-3">
+          <span className="inline-flex items-center gap-1.5 bg-white text-emerald-700 text-[11px] font-black px-2.5 py-1.5 rounded-xl border border-emerald-100">
+            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"/>
+            Open Now
+          </span>
+        </div>
+
+        <div className="absolute top-3 right-3">
+          <span className="bg-ink-900/80 backdrop-blur text-white text-[11px] font-black px-2.5 py-1.5 rounded-xl">
+            ₹{minPrice}/hr
+          </span>
+        </div>
+
+        <div className="absolute bottom-3 left-3 right-3 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 bg-white/90 backdrop-blur rounded-xl px-3 py-2 text-xs font-bold text-ink-800 flex items-center gap-1.5">
+              <svg className="w-3 h-3 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              View slots
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-5 flex flex-col flex-1">
+        <div className="flex items-start justify-between gap-2 mb-1.5">
+          <h3 className="font-display font-bold text-[17px] text-ink-900 group-hover:text-brand-600 transition-colors leading-snug">
+            {turf.name}
+          </h3>
+        </div>
+
+        <div className="flex items-center gap-1.5 text-ink-400 text-xs font-semibold mb-3">
+          <svg className="w-3.5 h-3.5 text-brand-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          <span className="truncate">{turf.address}</span>
+        </div>
+
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {turf.sports?.filter(Boolean).map((s, i) => {
+            const cfg = sports[s.sport] || { emoji:'🏅', bg:'bg-ink-50', text:'text-ink-600', border:'border-ink-200' }
+            return (
+              <span key={i} className={`inline-flex items-center gap-1 text-[11px] font-black px-2 py-1 rounded-lg border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+                {cfg.emoji} {s.sport}
+              </span>
+            )
+          })}
+        </div>
+
+        {turf.amenities?.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-3">
+            {turf.amenities.slice(0, 4).map((a, i) => (
+              <span key={i} className="text-[10px] font-semibold text-ink-400 bg-ink-50 border border-ink-100 px-2 py-0.5 rounded-lg">
+                {amenityIcons[a] || '•'} {a}
+              </span>
+            ))}
+            {turf.amenities.length > 4 && (
+              <span className="text-[10px] font-semibold text-ink-400 bg-ink-50 border border-ink-100 px-2 py-0.5 rounded-lg">
+                +{turf.amenities.length - 4}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="mt-auto pt-3 border-t border-ink-100 flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-bold text-ink-300 uppercase tracking-wider">Starting from</p>
+            <p className="font-display font-black text-xl text-ink-900">
+              ₹{minPrice}
+              <span className="text-sm font-semibold text-ink-400">/hr</span>
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 bg-brand-500 group-hover:bg-brand-600 text-white text-xs font-black px-4 py-2.5 rounded-2xl transition-colors">
+            Book Now
+            <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </Link>
+  )
+}
+
 export default function Discover() {
-  const [turfs, setTurfs] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [selectedSport, setSelectedSport] = useState('all')
-  const [sortBy, setSortBy] = useState('default')
+  const [turfs, setTurfs]         = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [search, setSearch]       = useState('')
+  const [sport, setSport]         = useState('all')
+  const [sort, setSort]           = useState('default')
+  const [view, setView]           = useState('grid')
+  const searchRef = useRef(null)
 
   useEffect(() => {
     getAllTurfs()
-      .then(res => setTurfs(res.data.turfs))
+      .then(r => setTurfs(r.data.turfs))
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
 
   const filtered = turfs
-    .filter(t => {
-      const matchSearch = t.name.toLowerCase().includes(search.toLowerCase()) ||
-        t.address.toLowerCase().includes(search.toLowerCase())
-      const matchSport = selectedSport === 'all' ||
-        (t.sports && t.sports.some(s => s && s.sport === selectedSport))
-      return matchSearch && matchSport
-    })
+    .filter(t =>
+      (t.name+t.address).toLowerCase().includes(search.toLowerCase()) &&
+      (sport === 'all' || t.sports?.some(s => s?.sport === sport))
+    )
     .sort((a, b) => {
-      if (sortBy === 'price_asc') {
-        const aMin = Math.min(...(a.sports || []).filter(Boolean).map(s => Number(s.base_price)))
-        const bMin = Math.min(...(b.sports || []).filter(Boolean).map(s => Number(s.base_price)))
-        return aMin - bMin
-      }
-      if (sortBy === 'price_desc') {
-        const aMin = Math.min(...(a.sports || []).filter(Boolean).map(s => Number(s.base_price)))
-        const bMin = Math.min(...(b.sports || []).filter(Boolean).map(s => Number(s.base_price)))
-        return bMin - aMin
-      }
+      const aP = Math.min(...(a.sports||[]).filter(Boolean).map(s=>+s.base_price))
+      const bP = Math.min(...(b.sports||[]).filter(Boolean).map(s=>+s.base_price))
+      if (sort === 'asc') return aP - bP
+      if (sort === 'desc') return bP - aP
       return 0
     })
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-ink-50">
 
-      <div className="relative bg-gradient-to-br from-primary-600 via-primary-700 to-emerald-800 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/5 rounded-full" />
-          <div className="absolute -bottom-32 -left-16 w-80 h-80 bg-white/5 rounded-full" />
-          <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-primary-500/20 rounded-full blur-3xl" />
-        </div>
+      <div className="relative overflow-hidden bg-ink-900 noise">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_60%_0%,rgba(249,115,22,0.18)_0%,transparent_65%)]"/>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_10%_100%,rgba(132,204,22,0.1)_0%,transparent_60%)]"/>
+        <div className="absolute right-0 top-0 w-96 h-96 border border-white/5 rounded-full translate-x-1/2 -translate-y-1/2"/>
+        <div className="absolute right-20 top-20 w-64 h-64 border border-white/5 rounded-full"/>
 
-        <div className="relative max-w-6xl mx-auto px-4 py-20 text-center">
-          <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur text-white text-xs font-bold px-4 py-2 rounded-full mb-6 border border-white/20 fade-in">
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            Slots available today
-          </div>
-
-          <h1 className="font-display text-5xl md:text-6xl font-extrabold text-white mb-5 leading-tight fade-in-delay-1">
-            Find & Book
-            <span className="block text-primary-200">Sports Turfs</span>
-          </h1>
-
-          <p className="text-primary-100 text-xl mb-10 max-w-xl mx-auto leading-relaxed fade-in-delay-2">
-            Instant booking at top-rated venues. Cricket, football, badminton and more.
-          </p>
-
-          <div className="bg-white rounded-2xl p-1.5 flex items-center gap-2 max-w-2xl mx-auto shadow-2xl fade-in-delay-3">
-            <div className="flex-1 flex items-center gap-3 pl-4">
-              <svg className="w-5 h-5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-              </svg>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search turf name or location..."
-                className="flex-1 py-3 text-slate-900 placeholder-slate-400 focus:outline-none text-sm font-medium bg-transparent"
-              />
-              {search && (
-                <button onClick={() => setSearch('')} className="text-slate-400 hover:text-slate-600 p-1">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-              )}
+        <div className="relative max-w-6xl mx-auto px-5 pt-16 pb-10">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 text-ink-300 text-[11px] font-black px-3 py-1.5 rounded-full mb-5 uppercase tracking-widest">
+              <span className="w-1.5 h-1.5 bg-lime-400 rounded-full animate-pulse"/>
+              Slots available right now
             </div>
-            <button className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-xl font-bold text-sm transition flex items-center gap-2">
-              Search
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-            </button>
+
+            <h1 className="font-display font-black text-5xl md:text-6xl text-white leading-[1.04] tracking-tight mb-4">
+              Your game.<br/>
+              <span className="text-brand-400">Your turf.</span><br/>
+              Right now.
+            </h1>
+
+            <p className="text-ink-400 text-lg font-medium leading-relaxed mb-8 max-w-lg">
+              Book premium sports venues instantly — no calls, no waiting. Just show up and play.
+            </p>
+
+            <div className="flex gap-2 bg-white/5 border border-white/10 rounded-2xl p-1.5">
+              <div className="flex-1 flex items-center gap-3 pl-3">
+                <svg className="w-4 h-4 text-ink-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <input ref={searchRef} type="text" value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search turf name or area..."
+                  className="flex-1 py-3 bg-transparent text-white placeholder-ink-500 focus:outline-none text-sm font-semibold"
+                />
+                {search && (
+                  <button onClick={() => setSearch('')} className="text-ink-500 hover:text-ink-300 p-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12"/></svg>
+                  </button>
+                )}
+              </div>
+              <button className="bg-brand-500 hover:bg-brand-600 text-white px-5 py-3 rounded-xl text-sm font-black transition-colors">
+                Search
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="relative max-w-5xl mx-auto px-4 pb-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {stats.map((stat, i) => (
-              <div key={i} className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-4 text-center">
-                <div className="text-2xl mb-1">{stat.icon}</div>
-                <div className="font-display text-2xl font-extrabold text-white">{stat.value}</div>
-                <div className="text-primary-200 text-xs font-medium mt-0.5">{stat.label}</div>
+        <div className="relative border-t border-white/5">
+          <div className="max-w-6xl mx-auto px-5 py-4 grid grid-cols-4 divide-x divide-white/5">
+            {[
+              { v:'500+', l:'Turfs Listed' },
+              { v:'50K+', l:'Active Players' },
+              { v:'20+',  l:'Cities' },
+              { v:'4.9★', l:'Avg Rating' },
+            ].map(s => (
+              <div key={s.l} className="px-6 first:pl-0 last:pr-0">
+                <p className="font-display font-black text-2xl text-white">{s.v}</p>
+                <p className="text-ink-500 text-xs font-semibold mt-0.5">{s.l}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-5 py-8">
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 w-full sm:w-auto">
-            <button
-              onClick={() => setSelectedSport('all')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap border-2 transition-all ${
-                selectedSport === 'all'
-                  ? 'bg-primary-600 text-white border-primary-600'
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-primary-300'
-              }`}
-            >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+            <button onClick={() => setSport('all')}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all border-2 ${
+                sport === 'all'
+                  ? 'bg-ink-900 text-white border-ink-900'
+                  : 'bg-white text-ink-600 border-ink-200 hover:border-ink-400'
+              }`}>
               All Sports
             </button>
-            {Object.entries(sportConfig).map(([sport, config]) => (
-              <button
-                key={sport}
-                onClick={() => setSelectedSport(sport)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap border-2 transition-all ${
-                  selectedSport === sport
-                    ? 'bg-primary-600 text-white border-primary-600'
-                    : 'bg-white text-slate-600 border-slate-200 hover:border-primary-300'
-                }`}
-              >
-                {config.icon} {sport.charAt(0).toUpperCase() + sport.slice(1)}
+            {Object.entries(sports).map(([key, cfg]) => (
+              <button key={key} onClick={() => setSport(key)}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all border-2 ${
+                  sport === key
+                    ? 'bg-ink-900 text-white border-ink-900'
+                    : `bg-white ${cfg.text} ${cfg.border} hover:border-ink-400`
+                }`}>
+                {cfg.emoji} {key.charAt(0).toUpperCase()+key.slice(1)}
               </button>
             ))}
           </div>
 
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="bg-white border-2 border-slate-200 text-slate-700 text-sm font-semibold px-4 py-2.5 rounded-xl focus:outline-none focus:border-primary-500 cursor-pointer"
-          >
-            <option value="default">Sort: Default</option>
-            <option value="price_asc">Price: Low to High</option>
-            <option value="price_desc">Price: High to Low</option>
-          </select>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <select value={sort} onChange={e => setSort(e.target.value)}
+              className="text-xs font-bold text-ink-700 bg-white border-2 border-ink-200 px-3 py-2 rounded-xl focus:outline-none focus:border-ink-900 cursor-pointer transition-all">
+              <option value="default">Sort: Featured</option>
+              <option value="asc">Price: Low → High</option>
+              <option value="desc">Price: High → Low</option>
+            </select>
+
+            <div className="flex bg-white border-2 border-ink-200 rounded-xl overflow-hidden">
+              {['grid','list'].map(v => (
+                <button key={v} onClick={() => setView(v)}
+                  className={`px-3 py-2 transition-all ${view===v ? 'bg-ink-900 text-white' : 'text-ink-400 hover:text-ink-700'}`}>
+                  {v === 'grid'
+                    ? <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                    : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+                  }
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {!loading && (
-          <p className="text-slate-500 text-sm font-medium mb-5">
-            {filtered.length === 0 ? 'No turfs found' : (
-              <>Showing <span className="font-bold text-slate-800">{filtered.length}</span> turf{filtered.length !== 1 ? 's' : ''}</>
+          <div className="flex items-center justify-between mb-5">
+            <p className="text-xs font-bold text-ink-400 uppercase tracking-widest">
+              {filtered.length === 0 ? 'No results' : `${filtered.length} turf${filtered.length !== 1 ? 's' : ''} found`}
+            </p>
+            {(search || sport !== 'all') && (
+              <button onClick={() => { setSearch(''); setSport('all') }}
+                className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1 transition-colors">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12"/></svg>
+                Clear filters
+              </button>
             )}
-          </p>
+          </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {loading
-            ? [1,2,3].map(i => <TurfCardSkeleton key={i} />)
-            : filtered.length === 0
-            ? (
-              <div className="col-span-3 text-center py-24">
-                <div className="text-6xl mb-4">🏟</div>
-                <h3 className="font-display text-xl font-bold text-slate-700 mb-2">No turfs found</h3>
-                <p className="text-slate-400 font-medium">Try adjusting your search or filter</p>
-                <button onClick={() => { setSearch(''); setSelectedSport('all') }}
-                  className="mt-4 px-5 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-bold hover:bg-primary-700 transition">
-                  Clear filters
-                </button>
-              </div>
-            )
-            : filtered.map((turf, idx) => {
-              const minPrice = turf.sports && turf.sports.filter(Boolean).length > 0
-                ? Math.min(...turf.sports.filter(Boolean).map(s => Number(s.base_price)))
-                : 0
-
-              return (
-                <Link
-                  key={turf.id}
-                  to={`/turf/${turf.id}`}
-                  className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-card card-hover group"
-                  style={{ animationDelay: `${idx * 0.05}s` }}
-                >
-                  <div className="relative h-52 bg-gradient-to-br from-primary-50 via-primary-100 to-emerald-100 overflow-hidden">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-8xl opacity-20 group-hover:scale-110 transition-transform duration-500">🏟</span>
-                    </div>
-                    <div className="absolute top-3 left-3 flex gap-2">
-                      <span className="bg-white/90 backdrop-blur text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-lg border border-emerald-100">
-                        ● Available
-                      </span>
-                    </div>
-                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur text-slate-800 text-xs font-bold px-2.5 py-1.5 rounded-lg">
-                      From ₹{minPrice}/hr
-                    </div>
-                    <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white/80 to-transparent" />
-                  </div>
-
-                  <div className="p-5">
-                    <h2 className="font-display text-lg font-bold text-slate-900 mb-1 group-hover:text-primary-600 transition">
-                      {turf.name}
-                    </h2>
-
-                    <div className="flex items-start gap-1.5 text-slate-400 text-sm mb-4 font-medium">
-                      <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                      </svg>
-                      <span className="line-clamp-1">{turf.address}</span>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1.5 mb-4">
-                      {turf.sports && turf.sports.filter(Boolean).map((sport, i) => {
-                        const cfg = sportConfig[sport.sport] || { icon: '🏅', color: 'bg-slate-100 text-slate-600 border-slate-200' }
-                        return (
-                          <span key={i} className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg border ${cfg.color}`}>
-                            {cfg.icon} {sport.sport}
-                          </span>
-                        )
-                      })}
-                    </div>
-
-                    {turf.amenities && turf.amenities.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-4">
-                        {turf.amenities.slice(0, 3).map((a, i) => (
-                          <span key={i} className="text-xs text-slate-400 font-medium bg-slate-50 px-2 py-0.5 rounded-lg">
-                            {a}
-                          </span>
-                        ))}
-                        {turf.amenities.length > 3 && (
-                          <span className="text-xs text-slate-400 font-medium bg-slate-50 px-2 py-0.5 rounded-lg">
-                            +{turf.amenities.length - 3} more
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                      <div>
-                        <p className="text-xs text-slate-400 font-medium">Starting from</p>
-                        <p className="font-display text-xl font-extrabold text-primary-600">
-                          ₹{minPrice}
-                          <span className="text-sm font-medium text-slate-400">/hr</span>
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1.5 bg-primary-600 group-hover:bg-primary-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition">
-                        Book Now
-                        <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/>
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              )
-            })
-          }
-        </div>
+        {loading ? (
+          <div className={view === 'grid'
+            ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5'
+            : 'flex flex-col gap-4'}>
+            {[1,2,3].map(i => <Skeleton key={i}/>)}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-28">
+            <div className="w-20 h-20 bg-ink-100 rounded-3xl flex items-center justify-center mx-auto mb-5 text-4xl">🔍</div>
+            <h3 className="font-display font-bold text-xl text-ink-800 mb-2">No turfs found</h3>
+            <p className="text-ink-400 text-sm font-medium mb-5">Try a different search term or sport</p>
+            <button onClick={() => { setSearch(''); setSport('all') }}
+              className="inline-flex items-center gap-2 bg-ink-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-ink-700 transition-colors">
+              Clear all filters
+            </button>
+          </div>
+        ) : (
+          <div className={view === 'grid'
+            ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5'
+            : 'flex flex-col gap-4'}>
+            {filtered.map(turf => <TurfCard key={turf.id} turf={turf}/>)}
+          </div>
+        )}
       </div>
     </div>
   )
