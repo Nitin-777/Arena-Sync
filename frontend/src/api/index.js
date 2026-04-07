@@ -24,3 +24,9 @@ export const cancelBooking = (id, reason) => API.post(`/bookings/${id}/cancel`, 
 export const createPaymentOrder = (booking_id) =>
   API.post('/payments/create-order', { booking_id });
 export const verifyPayment = (data) => API.post('/payments/verify', data);
+export const adminGetAllBookings = () => API.get('/admin/bookings')
+export const adminGetAllTurfs = () => API.get('/admin/turfs')
+export const adminGetAllUsers = () => API.get('/admin/users')
+export const adminGetStats = () => API.get('/admin/stats')
+export const adminUpdateTurfStatus = (id, status) => API.put(`/admin/turfs/${id}/status`, { status })
+export const adminUpdateUserRole = (id, role) => API.put(`/admin/users/${id}/role`, { role })
