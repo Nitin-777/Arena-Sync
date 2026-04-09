@@ -1,15 +1,56 @@
 import { useState, useEffect } from 'react'
 import { adminGetStats } from '../../api'
 
-const statCards = [
-  { key: 'revenue',   label: 'Total Revenue',   prefix: '₹', color: 'text-brand-600', bg: 'bg-brand-50',  border: 'border-brand-100', icon: '💰' },
-  { key: 'bookings',  label: 'Total Bookings',  prefix: '',  color: 'text-sky-600',   bg: 'bg-sky-50',    border: 'border-sky-100',   icon: '📅' },
-  { key: 'turfs',     label: 'Active Turfs',    prefix: '',  color: 'text-lime-600',  bg: 'bg-lime-50',   border: 'border-lime-100',  icon: '🏟' },
-  { key: 'users',     label: 'Total Users',     prefix: '',  color: 'text-purple-600',bg: 'bg-purple-50', border: 'border-purple-100',icon: '👥' },
-]
+function StatCard({ label, value, sub, trend }) {
+  return (
+    <div className="rounded-2xl p-5 flex flex-col gap-3"
+      style={{ background: '#fff', border: '1px solid #E8E8E4' }}>
+      <p style={{ fontSize: 11, fontWeight: 700, color: '#999', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+        {label}
+      </p>
+      <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 32, fontWeight: 800, color: '#0F0F0F', letterSpacing: '-0.03em', lineHeight: 1 }}>
+        {value}
+      </p>
+      {sub && (
+        <p style={{ fontSize: 12, color: '#999', fontWeight: 500 }}>{sub}</p>
+      )}
+    </div>
+  )
+}
+
+function RevenueBar({ data }) {
+  if (!data || data.length === 0) return (
+    <div className="flex items-center justify-center h-32" style={{ color: '#bbb', fontSize: 13 }}>
+      No revenue data yet
+    </div>
+  )
+  const max = Math.max(...data.map(d => Number(d.revenue)))
+  return (
+    <div className="flex items-end gap-2 h-32 w-full">
+      {data.map((d, i) => {
+        const pct = max > 0 ? (Number(d.revenue) / max) * 100 : 0
+        return (
+          <div key={i} className="flex-1 flex flex-col items-center gap-1.5 group">
+            <div className="relative w-full flex items-end" style={{ height: 80 }}>
+              <div className="w-full rounded-xl transition-all duration-500 group-hover:opacity-80 cursor-pointer"
+                style={{
+                  height: `${Math.max(pct, 4)}%`,
+                  background: pct > 70 ? '#0F0F0F' : pct > 40 ? '#555' : '#D1D1CB',
+                }}
+              />
+            </div>
+            <p style={{ fontSize: 10, color: '#999', fontWeight: 600 }}>
+              {new Date(d.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+            </p>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState(null)
+  const [stats, setStats]   = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -22,135 +63,148 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <div className="p-8">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {[1,2,3,4].map(i => (
-            <div key={i} className="bg-white rounded-3xl border border-ink-100 p-5 animate-pulse h-28"/>
+            <div key={i} className="rounded-2xl h-32 animate-pulse" style={{ background: '#E8E8E4' }}/>
           ))}
         </div>
       </div>
     )
   }
 
-  const bookingStats = stats?.bookings || {}
-  const turfStats = stats?.turfs || {}
-  const userStats = stats?.users || {}
-
-  const statValues = {
-    revenue:  Number(stats?.revenue || 0).toLocaleString('en-IN'),
-    bookings: bookingStats.total || 0,
-    turfs:    turfStats.active || 0,
-    users:    userStats.total || 0,
-  }
+  const b  = stats?.bookings    || {}
+  const t  = stats?.turfs       || {}
+  const u  = stats?.users       || {}
+  const rt = stats?.revenueToday || {}
 
   return (
-    <div className="p-8">
+    <div className="p-8 max-w-6xl">
 
       <div className="mb-8">
-        <h1 className="font-display font-black text-3xl text-ink-900">Dashboard</h1>
-        <p className="text-ink-400 font-medium text-sm mt-1">Welcome back — here's what's happening</p>
+        <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 28, fontWeight: 800, color: '#0F0F0F', letterSpacing: '-0.03em' }}>
+          Overview
+        </h1>
+        <p style={{ fontSize: 13, color: '#999', marginTop: 4, fontWeight: 500 }}>
+          {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+        </p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {statCards.map(card => (
-          <div key={card.key} className={`bg-white rounded-3xl border ${card.border} p-5`}>
-            <div className={`w-10 h-10 ${card.bg} rounded-2xl flex items-center justify-center text-xl mb-3`}>
-              {card.icon}
-            </div>
-            <p className="text-xs font-bold text-ink-400 uppercase tracking-widest mb-1">{card.label}</p>
-            <p className={`font-display font-black text-2xl ${card.color}`}>
-              {card.prefix}{statValues[card.key]}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        <StatCard
+          label="Total Revenue"
+          value={`₹${Number(stats?.revenue || 0).toLocaleString('en-IN')}`}
+          sub="All confirmed bookings"
+        />
+        <StatCard
+          label="Total Bookings"
+          value={b.total || 0}
+          sub={`${b.confirmed || 0} confirmed`}
+        />
+        <StatCard
+          label="Active Turfs"
+          value={t.active || 0}
+          sub={`${t.total || 0} total`}
+        />
+        <StatCard
+          label="Users"
+          value={u.total || 0}
+          sub="Registered accounts"
+        />
+      </div>
+
+      <div className="grid grid-cols-3 gap-4 mb-4">
+        {[
+          { label: "Today",      value: `₹${Number(rt.today || 0).toLocaleString('en-IN')}` },
+          { label: "This Week",  value: `₹${Number(rt.week  || 0).toLocaleString('en-IN')}` },
+          { label: "This Month", value: `₹${Number(rt.month || 0).toLocaleString('en-IN')}` },
+        ].map(item => (
+          <div key={item.label} className="rounded-2xl p-5"
+            style={{ background: '#0F0F0F', border: '1px solid #1a1a1a' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#555', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              {item.label}
+            </p>
+            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 28, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', marginTop: 10, lineHeight: 1 }}>
+              {item.value}
             </p>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+      <div className="grid grid-cols-3 gap-4 mb-4">
 
-        <div className="lg:col-span-2 bg-white rounded-3xl border border-ink-100 p-5">
-          <h2 className="font-display font-bold text-base text-ink-900 mb-5">Booking Status Breakdown</h2>
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              { label: 'Confirmed', value: bookingStats.confirmed || 0, color: 'bg-lime-500', text: 'text-lime-700', bg: 'bg-lime-50' },
-              { label: 'Pending',   value: bookingStats.pending   || 0, color: 'bg-yellow-400', text: 'text-yellow-700', bg: 'bg-yellow-50' },
-              { label: 'Cancelled', value: bookingStats.cancelled || 0, color: 'bg-red-400', text: 'text-red-700', bg: 'bg-red-50' },
-            ].map(s => (
-              <div key={s.label} className={`${s.bg} rounded-2xl p-4 text-center`}>
-                <p className={`font-display font-black text-3xl ${s.text}`}>{s.value}</p>
-                <p className="text-xs font-bold text-ink-500 mt-1">{s.label}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-5">
-            <div className="flex items-center gap-1 h-3 rounded-full overflow-hidden">
-              {[
-                { value: Number(bookingStats.confirmed || 0), color: 'bg-lime-500' },
-                { value: Number(bookingStats.pending   || 0), color: 'bg-yellow-400' },
-                { value: Number(bookingStats.cancelled || 0), color: 'bg-red-400' },
-              ].map((s, i) => {
-                const total = Number(bookingStats.total || 1)
-                const pct = total > 0 ? (s.value / total) * 100 : 0
-                return pct > 0 ? (
-                  <div key={i} className={`${s.color} h-full rounded-full transition-all`} style={{ width: `${pct}%` }}/>
-                ) : null
-              })}
-            </div>
-            <div className="flex items-center gap-4 mt-2">
-              {[
-                { label:'Confirmed', color:'bg-lime-500' },
-                { label:'Pending',   color:'bg-yellow-400' },
-                { label:'Cancelled', color:'bg-red-400' },
-              ].map(s => (
-                <div key={s.label} className="flex items-center gap-1.5 text-xs font-semibold text-ink-400">
-                  <div className={`w-2 h-2 rounded-full ${s.color}`}/>
-                  {s.label}
-                </div>
-              ))}
+        <div className="col-span-2 rounded-2xl p-6"
+          style={{ background: '#fff', border: '1px solid #E8E8E4' }}>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: '#0F0F0F' }}>
+                Revenue — Last 7 Days
+              </p>
+              <p style={{ fontSize: 12, color: '#999', marginTop: 2 }}>Daily confirmed booking revenue</p>
             </div>
           </div>
+          <RevenueBar data={stats?.revenueByDay} />
         </div>
 
-        <div className="bg-white rounded-3xl border border-ink-100 p-5">
-          <h2 className="font-display font-bold text-base text-ink-900 mb-4">Top Turfs</h2>
-          {stats?.topTurfs?.length === 0 ? (
-            <p className="text-ink-400 text-sm font-medium text-center py-8">No data yet</p>
-          ) : (
-            <div className="space-y-3">
-              {stats?.topTurfs?.map((t, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <div className="w-7 h-7 bg-ink-100 rounded-xl flex items-center justify-center text-xs font-black text-ink-600">
-                    {i + 1}
+        <div className="rounded-2xl p-6"
+          style={{ background: '#fff', border: '1px solid #E8E8E4' }}>
+          <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: '#0F0F0F', marginBottom: 16 }}>
+            Booking Status
+          </p>
+          <div className="space-y-3">
+            {[
+              { label: 'Confirmed', value: b.confirmed || 0, total: b.total || 1, color: '#0F0F0F' },
+              { label: 'Pending',   value: b.pending   || 0, total: b.total || 1, color: '#D1D1CB' },
+              { label: 'Cancelled', value: b.cancelled || 0, total: b.total || 1, color: '#E8E8E4' },
+            ].map(s => {
+              const pct = s.total > 0 ? Math.round((s.value / s.total) * 100) : 0
+              return (
+                <div key={s.label}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p style={{ fontSize: 12, fontWeight: 600, color: '#555' }}>{s.label}</p>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: '#0F0F0F' }}>{s.value}</p>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-ink-800 truncate">{t.name}</p>
-                    <p className="text-xs text-ink-400 font-medium">{t.bookings} bookings</p>
+                  <div className="w-full rounded-full overflow-hidden" style={{ height: 6, background: '#F4F4F0' }}>
+                    <div className="h-full rounded-full transition-all duration-700"
+                      style={{ width: `${pct}%`, background: s.color }}/>
                   </div>
-                  <p className="text-sm font-black text-brand-600">₹{Number(t.revenue).toLocaleString('en-IN')}</p>
                 </div>
-              ))}
-            </div>
-          )}
+              )
+            })}
+          </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl border border-ink-100 p-5">
-        <h2 className="font-display font-bold text-base text-ink-900 mb-4">Revenue — Last 7 Days</h2>
-        {stats?.revenueByDay?.length === 0 ? (
-          <p className="text-ink-400 text-sm font-medium text-center py-8">No revenue data yet</p>
+      <div className="rounded-2xl p-6"
+        style={{ background: '#fff', border: '1px solid #E8E8E4' }}>
+        <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: '#0F0F0F', marginBottom: 16 }}>
+          Top Turfs by Revenue
+        </p>
+        {!stats?.topTurfs?.length ? (
+          <p style={{ fontSize: 13, color: '#999', textAlign: 'center', padding: '24px 0' }}>No data yet</p>
         ) : (
-          <div className="flex items-end gap-2 h-32">
-            {stats?.revenueByDay?.map((d, i) => {
-              const max = Math.max(...stats.revenueByDay.map(x => Number(x.revenue)))
-              const pct = max > 0 ? (Number(d.revenue) / max) * 100 : 0
+          <div className="space-y-2">
+            {stats.topTurfs.map((t, i) => {
+              const maxRev = Number(stats.topTurfs[0]?.revenue || 1)
+              const pct = maxRev > 0 ? (Number(t.revenue) / maxRev) * 100 : 0
               return (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
-                  <p className="text-[9px] font-bold text-ink-400">₹{Number(d.revenue).toLocaleString('en-IN')}</p>
-                  <div className="w-full bg-ink-100 rounded-xl overflow-hidden" style={{ height: '80px' }}>
-                    <div className="w-full bg-brand-500 rounded-xl transition-all duration-500"
-                      style={{ height: `${pct}%`, marginTop: `${100 - pct}%` }}/>
+                <div key={i} className="flex items-center gap-4 p-3 rounded-xl transition-colors"
+                  style={{ background: i === 0 ? '#F4F4F0' : 'transparent' }}>
+                  <p style={{ fontSize: 12, fontWeight: 800, color: '#ccc', width: 16, textAlign: 'center' }}>
+                    {i + 1}
+                  </p>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p style={{ fontSize: 13, fontWeight: 600, color: '#0F0F0F' }}>{t.name}</p>
+                      <p style={{ fontSize: 13, fontWeight: 800, color: '#0F0F0F' }}>
+                        ₹{Number(t.revenue).toLocaleString('en-IN')}
+                      </p>
+                    </div>
+                    <div className="w-full rounded-full overflow-hidden" style={{ height: 4, background: '#E8E8E4' }}>
+                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: '#0F0F0F' }}/>
+                    </div>
                   </div>
-                  <p className="text-[9px] font-bold text-ink-400">
-                    {new Date(d.date).toLocaleDateString('en-IN', { day:'numeric', month:'short' })}
+                  <p style={{ fontSize: 11, color: '#999', fontWeight: 600, width: 60, textAlign: 'right' }}>
+                    {t.bookings} bookings
                   </p>
                 </div>
               )

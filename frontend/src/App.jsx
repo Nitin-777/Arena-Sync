@@ -23,19 +23,24 @@ const AdminRoute = ({ children }) => {
   return children
 }
 
-export default function App() {
-  const user = JSON.parse(localStorage.getItem('user') || '{}')
-  const isAdmin = user.role === 'admin'
+const isAdminPath = window.location.pathname.startsWith('/admin')
 
+export default function App() {
   return (
     <div className="min-h-screen bg-ink-50">
-      {!isAdmin && <Navbar />}
+      {!isAdminPath && <Navbar />}
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Discover />} />
         <Route path="/turf/:id" element={<TurfDetail />} />
-        <Route path="/my-bookings" element={<PrivateRoute><MyBookings /></PrivateRoute>} />
-        <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+        <Route
+          path="/my-bookings"
+          element={<PrivateRoute><MyBookings /></PrivateRoute>}
+        />
+        <Route
+          path="/admin"
+          element={<AdminRoute><AdminLayout /></AdminRoute>}
+        >
           <Route index element={<AdminDashboard />} />
           <Route path="bookings" element={<AdminBookings />} />
           <Route path="turfs" element={<AdminTurfs />} />
