@@ -26,29 +26,26 @@ const calculatePrice = async (turf_sport_id, slotIds) => {
 
   for (const rule of rules.rows) {
     const condition = rule.condition;
-
     if (rule.rule_type === 'peak_hour') {
       const peakStart = parseInt(condition.start.split(':')[0]);
       const peakEnd = parseInt(condition.end.split(':')[0]);
       if (startHour >= peakStart && startHour < peakEnd) {
-        multiplier = Math.max(multiplier, rule.multiplier);
+        multiplier = Math.max(multiplier, parseFloat(rule.multiplier));
       }
     }
-
     if (rule.rule_type === 'day_of_week') {
       if (condition.days.includes(dayOfWeek)) {
-        multiplier = Math.max(multiplier, rule.multiplier);
+        multiplier = Math.max(multiplier, parseFloat(rule.multiplier));
       }
     }
   }
 
-  const totalAmount = base_price * multiplier * slotIds.length;
+  const totalAmount = parseFloat(base_price) * multiplier * slotIds.length;
   return parseFloat(totalAmount.toFixed(2));
 };
 
 const createBooking = async (req, res) => {
   const client = await require('../config/db').connect();
-
   try {
     const { turf_sport_id, slot_ids, date } = req.body;
 
@@ -59,8 +56,8 @@ const createBooking = async (req, res) => {
     await client.query('BEGIN');
 
     const slotsResult = await client.query(
-      `SELECT * FROM slots 
-       WHERE id = ANY($1::uuid[]) 
+      `SELECT * FROM slots
+       WHERE id = ANY($1::uuid[])
        AND turf_sport_id = $2
        AND date = $3
        ORDER BY start_time ASC
@@ -89,7 +86,7 @@ const createBooking = async (req, res) => {
 
     const lockExpiry = new Date(Date.now() + 10 * 60 * 1000);
     await client.query(
-      `UPDATE slots 
+      `UPDATE slots
        SET status = 'locked', locked_by = $1, lock_expires_at = $2
        WHERE id = ANY($3::uuid[])`,
       [req.user.id, lockExpiry, slot_ids]
@@ -98,7 +95,7 @@ const createBooking = async (req, res) => {
     const totalAmount = await calculatePrice(turf_sport_id, slot_ids);
 
     const bookingResult = await client.query(
-      `INSERT INTO bookings 
+      `INSERT INTO bookings
         (user_id, turf_sport_id, slot_ids, date, start_time, end_time, total_amount, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
        RETURNING *`,
@@ -123,7 +120,7 @@ const createBooking = async (req, res) => {
     });
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error(error);
+    console.error('createBooking error:', error);
     res.status(500).json({ message: 'Server error' });
   } finally {
     client.release();
@@ -133,7 +130,7 @@ const createBooking = async (req, res) => {
 const getUserBookings = async (req, res) => {
   try {
     const result = await query(`
-      SELECT b.*, 
+      SELECT b.*,
         t.name as turf_name,
         t.address as turf_address,
         ts.sport,
@@ -149,14 +146,13 @@ const getUserBookings = async (req, res) => {
 
     res.json({ bookings: result.rows });
   } catch (error) {
-    console.error(error);
+    console.error('getUserBookings error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
 const cancelBooking = async (req, res) => {
   const client = await require('../config/db').connect();
-
   try {
     const { id } = req.params;
     const { reason } = req.body;
@@ -175,7 +171,7 @@ const cancelBooking = async (req, res) => {
 
     const booking = bookingResult.rows[0];
 
-    if (booking.user_id !== req.user.id) {
+    if (booking.user_id !== req.user.id && req.user.role !== 'admin') {
       await client.query('ROLLBACK');
       return res.status(403).json({ message: 'Not authorized' });
     }
@@ -185,46 +181,65 @@ const cancelBooking = async (req, res) => {
       return res.status(400).json({ message: 'Booking already cancelled' });
     }
 
-    const slotDateTime = new Date(`${booking.date}T${booking.start_time}`);
-    const hoursUntilSlot = (slotDateTime - Date.now()) / (1000 * 60 * 60);
+    const bookingDate = new Date(booking.date);
+    const timeParts = booking.start_time.split(':');
+    bookingDate.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0, 0);
+    const hoursUntilSlot = (bookingDate.getTime() - Date.now()) / (1000 * 60 * 60);
 
-    const turfSport = await client.query(
+    const turfSportResult = await client.query(
       'SELECT turf_id FROM turf_sports WHERE id = $1',
       [booking.turf_sport_id]
     );
-    const turf_id = turfSport.rows[0].turf_id;
+
+    if (turfSportResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: 'Turf sport not found' });
+    }
+
+    const turf_id = turfSportResult.rows[0].turf_id;
 
     const policies = await client.query(
-      `SELECT * FROM cancellation_policies 
-       WHERE turf_id = $1 AND hours_before <= $2
-       ORDER BY hours_before DESC LIMIT 1`,
-      [turf_id, hoursUntilSlot]
+      `SELECT * FROM cancellation_policies
+       WHERE turf_id = $1
+       ORDER BY hours_before DESC`,
+      [turf_id]
     );
 
-    const refundPercent = policies.rows.length > 0
-      ? policies.rows[0].refund_percent
-      : 0;
+    let refundPercent = 0;
+    for (const policy of policies.rows) {
+      if (hoursUntilSlot >= policy.hours_before) {
+        refundPercent = policy.refund_percent;
+        break;
+      }
+    }
 
-    const payment = await client.query(
+    const paymentResult = await client.query(
       'SELECT * FROM payments WHERE booking_id = $1',
       [id]
     );
 
     let refundAmount = 0;
-    if (payment.rows.length > 0 && payment.rows[0].status === 'captured') {
-      refundAmount = (booking.total_amount * refundPercent) / 100;
+    if (
+      paymentResult.rows.length > 0 &&
+      paymentResult.rows[0].status === 'captured'
+    ) {
+      refundAmount = (parseFloat(booking.total_amount) * refundPercent) / 100;
     }
 
     await client.query(
-      `UPDATE bookings 
-       SET status = 'cancelled', cancellation_reason = $1, cancelled_at = NOW()
+      `UPDATE bookings
+       SET status = 'cancelled',
+           cancellation_reason = $1,
+           cancelled_at = NOW()
        WHERE id = $2`,
       [reason || 'Cancelled by user', id]
     );
 
     await client.query(
-      `UPDATE slots 
-       SET status = 'available', locked_by = NULL, lock_expires_at = NULL
+      `UPDATE slots
+       SET status = 'available',
+           locked_by = NULL,
+           lock_expires_at = NULL
        WHERE id = ANY($1::uuid[])`,
       [booking.slot_ids]
     );
@@ -238,7 +253,7 @@ const cancelBooking = async (req, res) => {
     });
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error(error);
+    console.error('cancelBooking error:', error);
     res.status(500).json({ message: 'Server error' });
   } finally {
     client.release();

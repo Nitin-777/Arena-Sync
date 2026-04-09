@@ -11,22 +11,28 @@ const getAvailableSlots = async (req, res) => {
 
     await generateSlotsForDays(1);
 
+    const now = new Date();
+    const isToday = date === now.toISOString().split('T')[0];
+
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
     const result = await query(`
-      SELECT s.*, 
+      SELECT s.*,
         ts.base_price,
         ts.sport,
         ts.slot_duration_min
       FROM slots s
       JOIN turf_sports ts ON ts.id = s.turf_sport_id
-      WHERE s.turf_sport_id = $1 
+      WHERE s.turf_sport_id = $1
         AND s.date = $2
         AND s.status = 'available'
+        ${isToday ? `AND s.start_time > $3` : ''}
       ORDER BY s.start_time ASC
-    `, [turf_sport_id, date]);
+    `, isToday ? [turf_sport_id, date, currentTime] : [turf_sport_id, date]);
 
     res.json({ slots: result.rows });
   } catch (error) {
-    console.error(error);
+    console.error('getAvailableSlots error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -36,7 +42,7 @@ const triggerSlotGeneration = async (req, res) => {
     await generateSlotsForDays(7);
     res.json({ message: 'Slots generated successfully for next 7 days' });
   } catch (error) {
-    console.error(error);
+    console.error('triggerSlotGeneration error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
