@@ -12,12 +12,17 @@ export default function Login() {
   const [error, setError] = useState('')
 
   const handleSendOtp = async () => {
-    if (phone.length !== 10) return setError('Enter a valid 10-digit number')
-    setLoading(true); setError('')
-    try { await sendOtp(phone); setStep(2) }
-    catch { setError('Could not send OTP. Please try again.') }
-    setLoading(false)
-  }
+  if (phone.length !== 10) return setError('Enter a valid 10-digit number')
+  setLoading(true); setError('')
+  try {
+    const res = await sendOtp(phone)
+    if (res.data.otp) {
+      setError(`Dev mode OTP: ${res.data.otp}`)
+    }
+    setStep(2)
+  } catch { setError('Could not send OTP. Please try again.') }
+  setLoading(false)
+}
 
   const handleVerifyOtp = async () => {
     if (otp.length !== 6) return setError('OTP must be 6 digits')
