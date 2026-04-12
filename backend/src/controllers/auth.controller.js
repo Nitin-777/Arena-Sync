@@ -19,13 +19,15 @@ const sendOtp = async (req, res) => {
 
     console.log(`OTP for ${phone}: ${otp}`);
 
-    res.json({ message: 'OTP sent successfully' });
+          res.json({
+        message: 'OTP sent successfully',
+        otp,
+      });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
   }
 };
-
 const verifyOtp = async (req, res) => {
   try {
     const { phone, otp, name } = req.body;
