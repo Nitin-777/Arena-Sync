@@ -12,23 +12,46 @@ const getAvailableSlots = async (req, res) => {
     await generateSlotsForDays(1);
 
     const now = new Date();
-    const isToday = date === now.toISOString().split('T')[0];
 
-    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const todayIST = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+    const todayStr = todayIST.toISOString().split('T')[0];
 
-    const result = await query(`
-      SELECT s.*,
-        ts.base_price,
-        ts.sport,
-        ts.slot_duration_min
-      FROM slots s
-      JOIN turf_sports ts ON ts.id = s.turf_sport_id
-      WHERE s.turf_sport_id = $1
-        AND s.date = $2
-        AND s.status = 'available'
-        ${isToday ? `AND s.start_time > $3` : ''}
-      ORDER BY s.start_time ASC
-    `, isToday ? [turf_sport_id, date, currentTime] : [turf_sport_id, date]);
+    const isToday = date === todayStr;
+
+    const currentHour   = String(todayIST.getHours()).padStart(2, '0');
+    const currentMinute = String(todayIST.getMinutes()).padStart(2, '0');
+    const currentTime   = `${currentHour}:${currentMinute}`;
+
+    let result;
+
+    if (isToday) {
+      result = await query(`
+        SELECT s.*,
+          ts.base_price,
+          ts.sport,
+          ts.slot_duration_min
+        FROM slots s
+        JOIN turf_sports ts ON ts.id = s.turf_sport_id
+        WHERE s.turf_sport_id = $1
+          AND s.date = $2
+          AND s.status = 'available'
+          AND s.start_time > $3
+        ORDER BY s.start_time ASC
+      `, [turf_sport_id, date, currentTime]);
+    } else {
+      result = await query(`
+        SELECT s.*,
+          ts.base_price,
+          ts.sport,
+          ts.slot_duration_min
+        FROM slots s
+        JOIN turf_sports ts ON ts.id = s.turf_sport_id
+        WHERE s.turf_sport_id = $1
+          AND s.date = $2
+          AND s.status = 'available'
+        ORDER BY s.start_time ASC
+      `, [turf_sport_id, date]);
+    }
 
     res.json({ slots: result.rows });
   } catch (error) {
