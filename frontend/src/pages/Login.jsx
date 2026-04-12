@@ -4,26 +4,24 @@ import { sendOtp, verifyOtp } from '../api'
 
 export default function Login() {
   const navigate = useNavigate()
-  const [otpHint, setOtpHint] = useState('')
   const [phone, setPhone] = useState('')
   const [otp, setOtp]     = useState('')
   const [name, setName]   = useState('')
   const [step, setStep]   = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [otpHint, setOtpHint] = useState('')
 
- const handleSendOtp = async () => {
-  if (phone.length !== 10) return setError('Enter a valid 10-digit number')
-  setLoading(true); setError(''); setOtpHint('')
-  try {
-    const res = await sendOtp(phone)
-    setStep(2)
-    if (res.data.otp) {
-      setOtpHint(res.data.otp)
-    }
-  } catch { setError('Could not send OTP. Please try again.') }
-  setLoading(false)
-}
+  const handleSendOtp = async () => {
+    if (phone.length !== 10) return setError('Enter a valid 10-digit number')
+    setLoading(true); setError(''); setOtpHint('')
+    try {
+      const res = await sendOtp(phone)
+      if (res.data.otp) setOtpHint(res.data.otp)
+      setStep(2)
+    } catch { setError('Could not send OTP. Please try again.') }
+    setLoading(false)
+  }
 
   const handleVerifyOtp = async () => {
     if (otp.length !== 6) return setError('OTP must be 6 digits')
@@ -42,7 +40,6 @@ export default function Login() {
       <div className="hidden lg:flex w-[55%] relative overflow-hidden bg-ink-900 noise flex-col justify-between p-14">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(249,115,22,0.2)_0%,_transparent_60%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(132,204,22,0.1)_0%,_transparent_60%)]" />
-
         <div className="absolute top-32 right-20 w-64 h-64 rounded-full border border-white/5" />
         <div className="absolute top-48 right-32 w-40 h-40 rounded-full border border-white/5" />
         <div className="absolute bottom-40 left-20 w-80 h-80 rounded-full border border-white/5" />
@@ -72,7 +69,7 @@ export default function Login() {
             {[
               { n: '500+', l: 'Turfs' },
               { n: '50K+', l: 'Players' },
-              { n: '4.9', l: 'Rating' },
+              { n: '4.9',  l: 'Rating'  },
             ].map(s => (
               <div key={s.l} className="bg-white/5 border border-white/10 rounded-2xl p-4">
                 <p className="font-display font-black text-3xl text-white">{s.n}</p>
@@ -109,12 +106,12 @@ export default function Login() {
               <span className="font-display font-black text-lg text-ink-900">arena<span className="text-brand-500">sync</span></span>
             </div>
             <h1 className="font-display font-black text-4xl text-ink-900 leading-tight">
-              {step === 1 ? 'Welcome\nback.' : 'Check your\nphone.'}
+              {step === 1 ? 'Welcome back.' : 'Check your phone.'}
             </h1>
             <p className="text-ink-400 font-medium mt-2 text-sm">
               {step === 1
                 ? 'Sign in to book your next game'
-                : `Sent a 6-digit code to +91 ${phone}`}
+                : `OTP sent to +91 ${phone}`}
             </p>
           </div>
 
@@ -135,23 +132,15 @@ export default function Login() {
           </div>
 
           {error && (
-            <div className="flex items-center gap-2.5 bg-red-50 text-red-700 border border-red-100 px-4 py-3 rounded-2xl mb-5 text-xs font-bold">
+            <div className="flex items-center gap-2.5 bg-red-50 text-red-700 border border-red-100 px-4 py-3 rounded-2xl mb-4 text-xs font-bold">
               <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"/>
               </svg>
               {error}
             </div>
           )}
-          {otpHint && (
-  <div className="flex items-center gap-2.5 bg-lime-50 border border-lime-200 text-lime-700 px-4 py-3 rounded-2xl mb-5 text-sm font-bold">
-    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
-    </svg>
-    Dev mode — Your OTP is: <span className="text-2xl tracking-widest ml-2">{otpHint}</span>
-  </div>
-)}
 
-          {step === 1 ? (
+          {step === 1 && (
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-black text-ink-700 uppercase tracking-widest mb-2">Phone Number</label>
@@ -164,7 +153,7 @@ export default function Login() {
                     onChange={e => setPhone(e.target.value.replace(/\D/g,''))}
                     placeholder="98765 43210"
                     maxLength={10}
-                    onKeyDown={e => e.key==='Enter' && handleSendOtp()}
+                    onKeyDown={e => e.key === 'Enter' && handleSendOtp()}
                     className="flex-1 px-4 py-4 text-ink-900 placeholder-ink-300 focus:outline-none font-semibold text-sm bg-white"
                   />
                 </div>
@@ -178,8 +167,29 @@ export default function Login() {
                 }
               </button>
             </div>
-          ) : (
+          )}
+
+          {step === 2 && (
             <div className="space-y-4">
+
+              {otpHint && (
+                <div className="flex items-center justify-between bg-lime-50 border-2 border-lime-200 px-4 py-3 rounded-2xl">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-lime-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span className="text-xs font-bold text-lime-700 uppercase tracking-wider">Your OTP</span>
+                  </div>
+                  <span
+                    className="font-display font-black text-2xl text-lime-700 tracking-widest cursor-pointer"
+                    onClick={() => setOtp(otpHint)}
+                    title="Click to autofill"
+                  >
+                    {otpHint}
+                  </span>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-black text-ink-700 uppercase tracking-widest mb-2">Your Name</label>
                 <input type="text" value={name}
@@ -195,22 +205,29 @@ export default function Login() {
                   onChange={e => setOtp(e.target.value.replace(/\D/g,''))}
                   placeholder="000000"
                   maxLength={6}
-                  onKeyDown={e => e.key==='Enter' && handleVerifyOtp()}
+                  onKeyDown={e => e.key === 'Enter' && handleVerifyOtp()}
                   className="w-full border-2 border-ink-200 focus:border-ink-900 text-ink-900 placeholder-ink-200 px-4 py-4 rounded-2xl focus:outline-none transition text-center text-3xl tracking-[0.6em] font-black bg-white"
                 />
-                <p className="text-center text-ink-300 text-[11px] font-semibold mt-2">
-                  Check VS Code terminal for OTP (dev mode)
-                </p>
+                {otpHint && (
+                  <p className="text-center text-lime-600 text-[11px] font-bold mt-1.5">
+                    Click the OTP above to autofill
+                  </p>
+                )}
               </div>
 
               <button onClick={handleVerifyOtp} disabled={loading}
                 className="w-full bg-ink-900 hover:bg-ink-700 text-white py-4 rounded-2xl font-black text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2 group">
-                {loading ? 'Verifying...' : <><span>Verify & Continue</span><svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></>}
+                {loading
+                  ? 'Verifying...'
+                  : <><span>Verify & Continue</span><svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></>
+                }
               </button>
 
-              <button onClick={() => { setStep(1); setError(''); setOtp('') }}
+              <button onClick={() => { setStep(1); setError(''); setOtp(''); setOtpHint('') }}
                 className="w-full py-3 text-ink-400 hover:text-ink-700 text-xs font-bold uppercase tracking-widest transition flex items-center justify-center gap-1.5">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 17l-5-5m0 0l5-5m-5 5h12"/></svg>
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 17l-5-5m0 0l5-5m-5 5h12"/>
+                </svg>
                 Change number
               </button>
             </div>
@@ -218,7 +235,9 @@ export default function Login() {
 
           <p className="text-center text-ink-300 text-[11px] font-medium mt-8 leading-relaxed">
             By continuing, you agree to our<br/>
-            <span className="text-ink-500 underline underline-offset-2 cursor-pointer">Terms of Service</span> and <span className="text-ink-500 underline underline-offset-2 cursor-pointer">Privacy Policy</span>
+            <span className="text-ink-500 underline underline-offset-2 cursor-pointer">Terms of Service</span>
+            {' '}and{' '}
+            <span className="text-ink-500 underline underline-offset-2 cursor-pointer">Privacy Policy</span>
           </p>
         </div>
       </div>
