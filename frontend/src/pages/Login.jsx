@@ -4,6 +4,7 @@ import { sendOtp, verifyOtp } from '../api'
 
 export default function Login() {
   const navigate = useNavigate()
+  const [otpHint, setOtpHint] = useState('')
   const [phone, setPhone] = useState('')
   const [otp, setOtp]     = useState('')
   const [name, setName]   = useState('')
@@ -11,15 +12,15 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const handleSendOtp = async () => {
+ const handleSendOtp = async () => {
   if (phone.length !== 10) return setError('Enter a valid 10-digit number')
-  setLoading(true); setError('')
+  setLoading(true); setError(''); setOtpHint('')
   try {
     const res = await sendOtp(phone)
-    if (res.data.otp) {
-      setError(`Dev mode OTP: ${res.data.otp}`)
-    }
     setStep(2)
+    if (res.data.otp) {
+      setOtpHint(res.data.otp)
+    }
   } catch { setError('Could not send OTP. Please try again.') }
   setLoading(false)
 }
@@ -141,6 +142,14 @@ export default function Login() {
               {error}
             </div>
           )}
+          {otpHint && (
+  <div className="flex items-center gap-2.5 bg-lime-50 border border-lime-200 text-lime-700 px-4 py-3 rounded-2xl mb-5 text-sm font-bold">
+    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
+    </svg>
+    Dev mode — Your OTP is: <span className="text-2xl tracking-widest ml-2">{otpHint}</span>
+  </div>
+)}
 
           {step === 1 ? (
             <div className="space-y-4">
