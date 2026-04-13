@@ -194,7 +194,7 @@ export default function Login() {
                 <label className="block text-xs font-black text-ink-700 uppercase tracking-widest mb-2">Your Name</label>
                 <input type="text" value={name}
                   onChange={e => setName(e.target.value)}
-                  placeholder="John Doe"
+                  placeholder="Name"
                   className="w-full border-2 border-ink-200 focus:border-ink-900 text-ink-900 placeholder-ink-300 px-4 py-4 rounded-2xl focus:outline-none transition font-semibold text-sm bg-white"
                 />
               </div>
